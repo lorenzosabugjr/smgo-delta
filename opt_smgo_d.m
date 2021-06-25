@@ -410,7 +410,7 @@ for iter = 1:max_iter
     
     % generate/update trust region hyperbox
     if ( mode_prev == MODE_EXPLOIT ) && opt_z_new
-        if z < mode1_thr
+        if z_n < mode1_thr
             % if the actual sample is actually less than expected improvement, 
             % then enlarge the trust region hyperbox
             if tr_exp > 0
@@ -495,7 +495,7 @@ for iter = 1:max_iter
         sbl_tmp = sbl_vld( 1:D, mdpt_idx );
         % if chosen point x_n is too close to an existing sample, choose another
         while ~isempty( sbl_tmp ) && min( sum( ( X_n( 1:D, : ) - sbl_tmp * ones( 1, iter ) ) .^ 2 ) ) < 1e-9 
-            disp( 'Duplicate sampling detected. Choosing another exploitation point.' );
+%             disp( 'Duplicate sampling detected. Choosing another exploitation point.' );
             sbl_vld( : , mdpt_idx ) = [];
             [ ~, mdpt_idx ]         = min( sbl_vld( end, : ) );        
             sbl_tmp                 = sbl_vld( 1:D, mdpt_idx );            
@@ -527,7 +527,7 @@ for iter = 1:max_iter
             mode_hist( iter ) = MODE_EXPLOIT;
             mode_prev         = MODE_EXPLOIT;
             mode1_ok          = true;
-            disp( [ num2str( iter ), ' Exploitation' ] );
+%             disp( [ num2str( iter ), ' Exploitation' ] );
         end
     end
     
@@ -574,7 +574,7 @@ for iter = 1:max_iter
         end
         mode_hist(iter) = MODE_EXPLORE;
         mode_prev       = MODE_EXPLORE;
-        disp( [ num2str( iter ), ' Exploration' ] );
+%         disp( [ num2str( iter ), ' Exploration' ] );
     end
 
     % after i cleared the chosen column in db_cdpt (look at lines 101, 424), why do duplicates still exist?
