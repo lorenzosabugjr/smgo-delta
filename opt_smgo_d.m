@@ -19,19 +19,42 @@ function out = opt_smgo_d( options )
 % - phi   - age multiplier
 
 %% Acquiring function arguments/options
-max_iter = getfield( options, 'maxiter' );
-f        = getfield( options, 'objfun' );
-bounds   = getfield( options, 'bounds' );
+max_iter  = options.maxiter;
+f         = options.objfun;
+bounds    = options.bounds;
 [ D , ~ ] = size( bounds );
 
+% ===========================================
+% quasi-random points distribution parameters
+% ===========================================
 if isfield( options, 'sobolsize' )
     sbl_size = options.sobolsize;
 else
     sbl_size = 500;
 end
+if isfield( options, 'sobol' )
+    if ~options.sobol
+        sbl_size = 0;
+    end
+end
 sbl_seq = sobolset( D );
 sbl_seq = sbl_seq( 1:sbl_size, : )';
+% ===========================================
 
+% ===========================================
+% trust region parameters
+% ===========================================
+tr_coeff = 0.5;
+if isfield( options, 'trustregion' )
+    if ~options.trustregion
+        tr_coeff = 1.0;
+    end
+end
+% ===========================================
+
+% ===========================================
+% constraint function/s parameters
+% ===========================================
 if isfield( options, 'confun' )
     g = options.confun;
 else
@@ -44,13 +67,25 @@ else
     g_len = 0;
 end
 
+if ~exist( 'g_len', 'var' )
+    g_len = length( g ); % number of constraints (g is an array of function handles)
+end
+% ===========================================
+
+% ===========================================
+% starting point
+% ===========================================
 if isfield( options, 'startpt' )
     x0 = options.startpt;
 else
     x0 = rand( D, 1 );
     disp( 'Starting from a random start point.' );
 end
+% ===========================================
 
+% ===========================================
+% SMGO-D advanced parameters
+% ===========================================
 if isfield( options, 'alpha' )
     alpha = options.alpha;
 else
@@ -80,13 +115,12 @@ if isfield( options, 'B' )
 else
     B = 5;
 end
+% ===========================================
 
-diam  = sqrt( D );   % diameter of search space
-if ~exist( 'g_len', 'var' )
-    g_len = length( g ); % number of constraints (g is an array of function handles)
-end
 
 %% Define initial variable values
+
+diam  = sqrt( D );   % diameter of search space
 
 % Lipschitz constants
 fgam_0    = 1e-6;   ggam_0    = 1e-6 * ones( g_len, 1 );
@@ -103,17 +137,20 @@ MODE_EXPLORE = 2;
 X_n = [];
 mode_hist   = NaN( 1, max_iter );
 mode_prev   = MODE_EXPLORE;
-opt_z       = Inf;
-opt_z_hist  = NaN( 1, max_iter );
 opt_x       = NaN( D, 1 );
+opt_z       = Inf;
+opt_c       = NaN( g_len, 1 );
 opt_x_hist  = NaN( D, max_iter );
+opt_z_hist  = NaN( 1, max_iter );
+opt_c_hist  = NaN( g_len, max_iter );
 calc_t_hist = NaN( 1, max_iter );
 eps_hist    = NaN( 1 + g_len, max_iter );
 gam_hist    = NaN( 1 + g_len, max_iter );
 
-% trust region parameters
-tr_coeff = 0.5;                tr_exp   = 0;
-tr_hist  = NaN( 1, max_iter ); tr_exp_0 = 0;
+tr_exp   = 0;
+tr_exp_0 = 0;
+tr_hist  = NaN( 1, max_iter ); 
+mode1_thr = Inf;
 
 % additional rows for X_n
 XN_ROW_FVAL = D + 1;
@@ -252,12 +289,11 @@ for iter = 1:max_iter
     if sum( c_n >= 0 ) == g_len && z_n < opt_z % build exploitation table only if all constraints are fulfilled
         opt_z = z_n;
         opt_x = x_n;        
+        opt_c = c_n;
         opt_z_new = true;
     else
         opt_z_new = false;
     end    
-    opt_z_hist( iter )     = opt_z;
-    opt_x_hist( : , iter ) = opt_x;
     
     %% iteratively update the midpoint database db_cdpt
     % - saves the vertex value of the upper (lower) bound
@@ -374,9 +410,12 @@ for iter = 1:max_iter
     
     % generate/update trust region hyperbox
     if ( mode_prev == MODE_EXPLOIT ) && opt_z_new
-        % if not already the largest measure, then enlarge the trust region hyperbox
-        if tr_exp > 0
-            tr_exp = tr_exp - 1;
+        if z < mode1_thr
+            % if the actual sample is actually less than expected improvement, 
+            % then enlarge the trust region hyperbox
+            if tr_exp > 0
+                tr_exp = tr_exp - 1;
+            end
         end
     else
         % shrink the trust region hyperbox
@@ -481,8 +520,9 @@ for iter = 1:max_iter
         x_n_tmp = [];
     end
     
+    mode1_thr = opt_z - alpha * fgam;
     if ~isempty( x_n_tmp )
-        if opt_z < Inf && max( (X_n(XN_ROW_FVAL,:) - feps) - fgam*sqrt(sum((x_n_tmp*ones(1,iter) - X_n(1:D,:)).^2)) ) < opt_z - alpha * fgam
+        if opt_z < Inf && max( (X_n(XN_ROW_FVAL,:) - feps) - fgam*sqrt(sum((x_n_tmp*ones(1,iter) - X_n(1:D,:)).^2)) ) < mode1_thr
             x_n = x_n_tmp;
             mode_hist( iter ) = MODE_EXPLOIT;
             mode_prev         = MODE_EXPLOIT;
@@ -543,10 +583,12 @@ for iter = 1:max_iter
     end
 
     calc_t_hist( iter ) = toc( calc_time );
-    x_hist = X_n( 1:D, : );    
     if ~exist( 'opt_x', 'var' )
         opt_x = NaN( D, 1 );
     end    
+    opt_x_hist( : , iter ) = opt_x;
+    opt_z_hist( iter )     = opt_z;
+    opt_c_hist( : , iter ) = opt_c;
     
     %% Debug section        
     if ( fgam == Inf ) || ismember( Inf, ggam )
@@ -554,20 +596,19 @@ for iter = 1:max_iter
     end
 end
 
+x_hist = X_n( 1:D, : );    
 z_hist = X_n( XN_ROW_FVAL, : );
-c_hist = [];
-for g_i = 1:g_len
-    XN_ROW_GVAL_I = XN_ROW_GVAL + g_i - 1;
-    c_hist = [ c_hist; X_n( XN_ROW_GVAL_I, : ) ];
-end
+c_hist = X_n( XN_ROW_GVAL:end, : );
     
 out.opt_x       = opt_x;
 out.opt_z       = opt_z;
+out.opt_c       = opt_c;
 out.x_hist      = x_hist;
 out.z_hist      = z_hist;
 out.c_hist      = c_hist;
 out.opt_x_hist  = opt_x_hist;
 out.opt_z_hist  = opt_z_hist;
+out.opt_c_hist  = opt_c_hist;
 out.calc_t_hist = calc_t_hist;
 out.mode_hist   = mode_hist;
 out.eps_hist    = eps_hist;
