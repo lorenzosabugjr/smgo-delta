@@ -427,7 +427,7 @@ for iter = 1:max_iter
             tr_exp = tr_exp_0;
         end
     end    
-    tr_bounds = ones( D, 1 ) * [ 0 1 ] * tr_size * ( tr_coeff ^ tr_exp ) + opt_x * ones( 1, 2 ) * tr_size * ( 1 - tr_coeff ^ tr_exp );
+    tr_bounds = ones( D, 1 ) * [ 0 1 ] * tr_size * ( tr_coeff ^ tr_exp ) + opt_x * ones( 1, 2 ) * ( 1 - tr_size * tr_coeff ^ tr_exp );
     tr_hist( iter ) = tr_exp;
     
     % create candidate points inside tr_bounds, decided by location of sblset points
@@ -438,9 +438,10 @@ for iter = 1:max_iter
         sbl_cdpt( SBL_ROW_FUB, sbl_i ) = min( (X_n(XN_ROW_FVAL,:) + feps) + fgam*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );  
         sbl_cdpt( SBL_ROW_FLB, sbl_i ) = max( (X_n(XN_ROW_FVAL,:) - feps) - fgam*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );
         for g_i = 1:g_len
+            XN_ROW_GVAL_I = XN_ROW_GVAL + g_i - 1;
             SBL_G_I = SBL_ROW_G_INFO + 2*(g_i-1);
-            sbl_cdpt( SBL_G_I + SBL_ROW_GUB, sbl_i ) = min( (X_n(XN_ROW_FVAL,:) + geps(g_i)) + ggam(g_i)*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );  
-            sbl_cdpt( SBL_G_I + SBL_ROW_GLB, sbl_i ) = max( (X_n(XN_ROW_FVAL,:) - geps(g_i)) - ggam(g_i)*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );
+            sbl_cdpt( SBL_G_I + SBL_ROW_GUB, sbl_i ) = min( (X_n(XN_ROW_GVAL_I,:) + geps(g_i)) + ggam(g_i)*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );  
+            sbl_cdpt( SBL_G_I + SBL_ROW_GLB, sbl_i ) = max( (X_n(XN_ROW_GVAL_I,:) - geps(g_i)) - ggam(g_i)*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );
         end
     end
     
