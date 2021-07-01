@@ -44,12 +44,13 @@ sbl_seq = sbl_seq( 1:sbl_size, : )';
 % ===========================================
 % trust region parameters
 % ===========================================
-tr_coeff = 0.5;
+tr_size = 0.1;
 if isfield( options, 'trustregion' )
     if ~options.trustregion
-        tr_coeff = 1.0;
+        tr_size = 1.0;
     end
 end
+tr_coeff = 0.75;
 % ===========================================
 
 % ===========================================
@@ -404,8 +405,9 @@ for iter = 1:max_iter
             ( db_cdpt( CDPT_G_I + CDPT_G_UB_VTX, : ) + db_cdpt( CDPT_G_I + CDPT_G_UB_HGT, : ) ) ... 
             - ( db_cdpt( CDPT_G_I + CDPT_G_LB_VTX, : ) - db_cdpt( CDPT_G_I + CDPT_G_LB_HGT, : ) ) + 2 * geps( g_i );
         db_cdpt( CDPT_G_I + CDPT_G_EST, : )    = ...
-            ( ( db_cdpt( CDPT_G_I + CDPT_G_UB_VTX, : ) + db_cdpt( CDPT_G_I + CDPT_G_UB_HGT, : ) ) ... 
-            + ( db_cdpt( CDPT_G_I + CDPT_G_LB_VTX, : ) - db_cdpt( CDPT_G_I + CDPT_G_LB_HGT, : ) ) ) / 2;
+            delta * ( ( db_cdpt( CDPT_G_I + CDPT_G_UB_VTX, : ) + db_cdpt( CDPT_G_I + CDPT_G_UB_HGT, : ) ) ... 
+                    + ( db_cdpt( CDPT_G_I + CDPT_G_LB_VTX, : ) - db_cdpt( CDPT_G_I + CDPT_G_LB_HGT, : ) ) ) / 2 + ...
+            ( 1 - delta ) * ( db_cdpt( CDPT_G_I + CDPT_G_LB_VTX, : ) - db_cdpt( CDPT_G_I + CDPT_G_LB_HGT, : ) );
     end
     
     % generate/update trust region hyperbox
@@ -425,7 +427,7 @@ for iter = 1:max_iter
             tr_exp = tr_exp_0;
         end
     end    
-    tr_bounds = ones( D, 1 ) * [ 0 1 ] * ( tr_coeff ^ tr_exp ) + opt_x * ones( 1, 2 ) * ( 1 - tr_coeff ^ tr_exp );
+    tr_bounds = ones( D, 1 ) * [ 0 1 ] * tr_size * ( tr_coeff ^ tr_exp ) + opt_x * ones( 1, 2 ) * tr_size * ( 1 - tr_coeff ^ tr_exp );
     tr_hist( iter ) = tr_exp;
     
     % create candidate points inside tr_bounds, decided by location of sblset points
