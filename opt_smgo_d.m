@@ -247,9 +247,11 @@ for iter = 1:max_iter
         for g_i = 1:g_len
             XN_ROW_GVAL_I = XN_ROW_GVAL + g_i - 1;            
             ns_lkup = NaN( 1, iter );
-            if sum( ball_idx( j, : ) ) > 0
-                ns_lkup( j ) = max( abs( X_n( XN_ROW_GVAL_I, ball_idx( j, : ) ) - X_n( XN_ROW_GVAL_I, j ) ) );
-            end            
+            for j = 1:iter
+                if sum( ball_idx( j, : ) ) > 0
+                    ns_lkup( j ) = max( abs( X_n( XN_ROW_GVAL_I, ball_idx( j, : ) ) - X_n( XN_ROW_GVAL_I, j ) ) );
+                end            
+            end
             geps( g_i ) = sum( ns_lkup( ns_lkup > 0 ) ) / ( 2 * sum( sum( ball_idx ) ) );
         end 
         
