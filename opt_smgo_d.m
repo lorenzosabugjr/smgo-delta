@@ -50,7 +50,7 @@ if isfield( options, 'trustregion' )
         tr_size = 1.0;
     end
 end
-tr_coeff = 0.75;
+tr_coeff = 0.5;
 % ===========================================
 
 % ===========================================
@@ -329,7 +329,7 @@ for iter = 1:max_iter
         db_cdpt( CDPT_ROW_F_LB_VTX, f_lb_update ) = z_n;
         db_cdpt( CDPT_ROW_F_LB_HGT, f_lb_update ) = new_cone_hgt( :, f_lb_update );
         
-        db_cdpt( end-1, : ) = min( db_cdpt( end-1, : ), sqrt( sum( ( db_cdpt( 1:D, : ) - x_n * ones( 1, cdpts ) ) .^ 2 ) ) );
+        db_cdpt( end-1, : ) = min( db_cdpt( end-1, : ), sqrt( sum( ( db_cdpt( 1:D, : ) - x_n * ones( 1, cdpts ) ) .^ 2 ) ) / diam );
         % incrementing age of existing candidate points
         db_cdpt( end, : ) = db_cdpt( end, : ) + 1;
         
@@ -395,7 +395,7 @@ for iter = 1:max_iter
             db_cdpt_iter( CDPT_G_I + (CDPT_G_UB_VTX:CDPT_G_LB_HGT), new_cdpt ) = [ g_ulb_lookup( 1:2, ub_idx );
                                                                                    g_ulb_lookup( 1:2, lb_idx ) ];
         end
-        db_cdpt_iter( end-1, new_cdpt ) = min( sqrt( sum( ( X_n( 1:D, 1:end ) - db_cdpt_iter( 1:D, new_cdpt ) * ones( 1, iter ) ) .^ 2 ) ) );
+        db_cdpt_iter( end-1, new_cdpt ) = min( sqrt( sum( ( X_n( 1:D, 1:end ) - db_cdpt_iter( 1:D, new_cdpt ) * ones( 1, iter ) ) .^ 2 ) ) ) / diam;
     end
     db_cdpt = [ db_cdpt db_cdpt_iter ];
     
@@ -434,14 +434,14 @@ for iter = 1:max_iter
     
     % create candidate points inside tr_bounds, decided by location of sblset points
     % sblset points are D x num matrix
-    sbl_cdpt = [ sbl_seq * ( tr_coeff ^ tr_exp ) + tr_bounds( : , 1 ) * ones( 1, sbl_size ); 
+    sbl_cdpt = [ sbl_seq * tr_size * ( tr_coeff ^ tr_exp ) + tr_bounds( : , 1 ) * ones( 1, sbl_size ); 
                  zeros( 2 + 2*g_len, sbl_size ) ];
     for sbl_i = 1:sbl_size
         sbl_cdpt( SBL_ROW_FUB, sbl_i ) = min( (X_n(XN_ROW_FVAL,:) + feps) + fgam*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );  
         sbl_cdpt( SBL_ROW_FLB, sbl_i ) = max( (X_n(XN_ROW_FVAL,:) - feps) - fgam*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );
         for g_i = 1:g_len
-            XN_ROW_GVAL_I = XN_ROW_GVAL + g_i - 1;
             SBL_G_I = SBL_ROW_G_INFO + 2*(g_i-1);
+            XN_ROW_GVAL_I = XN_ROW_GVAL + g_i - 1;
             sbl_cdpt( SBL_G_I + SBL_ROW_GUB, sbl_i ) = min( (X_n(XN_ROW_GVAL_I,:) + geps(g_i)) + ggam(g_i)*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );  
             sbl_cdpt( SBL_G_I + SBL_ROW_GLB, sbl_i ) = max( (X_n(XN_ROW_GVAL_I,:) - geps(g_i)) - ggam(g_i)*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );
         end
@@ -489,7 +489,8 @@ for iter = 1:max_iter
     % filtering due to constraints satisfaction
     for g_i = 1:g_len
         SBL_G_I = SBL_ROW_G_INFO + 2*(g_i-1);
-        sbl_vld_idx = sbl_vld_idx & ( ( sbl_cdpt( SBL_G_I + SBL_ROW_GUB, : ) + sbl_cdpt( SBL_G_I + SBL_ROW_GLB, : ) ) >= 0 );
+        sbl_vld_idx = sbl_vld_idx & ( delta * ( sbl_cdpt( SBL_G_I + SBL_ROW_GUB, : ) + sbl_cdpt( SBL_G_I + SBL_ROW_GLB, : ) ) / 2 + ...
+                                      ( 1 - delta ) * sbl_cdpt( SBL_G_I + SBL_ROW_GLB, : ) >= 0 );
     end
     sbl_vld = sbl_cdpt( : , sbl_vld_idx );
     if ~isempty( sbl_vld )
@@ -550,19 +551,19 @@ for iter = 1:max_iter
             w_unc        = w_unc + ( db_cdpt( CDPT_G_I + CDPT_G_LAMBDA, : ) )/ggam( g_i ); %  - 2 * geps( g_i )
             cdpt_vld_idx = cdpt_vld_idx & g_i_vld;
             
-            XN_ROW_GVAL_I = XN_ROW_GVAL + g_i - 1;
-            g_i_min       = min( X_n( XN_ROW_GVAL_I, : ) );
-            if g_i_min >= 0
-                continue;
-            else                
-                w_viol_idx = ( db_cdpt( CDPT_G_I + CDPT_G_EST, : ) < 0 );
-                w_viol_div = 1 + w_viol_idx .* db_cdpt( CDPT_G_I + CDPT_G_EST, : ) / g_i_min;
-                w_viol     = w_viol ./ w_viol_div;
-            end            
+%             XN_ROW_GVAL_I = XN_ROW_GVAL + g_i - 1;
+%             g_i_min       = min( X_n( XN_ROW_GVAL_I, : ) );
+%             if g_i_min >= 0
+%                 continue;
+%             else                
+%                 w_viol_idx = ( db_cdpt( CDPT_G_I + CDPT_G_EST, : ) < 0 );
+%                 w_viol_div = 1 + w_viol_idx .* db_cdpt( CDPT_G_I + CDPT_G_EST, : ) / g_i_min;
+%                 w_viol     = w_viol ./ w_viol_div;
+%             end            
         end
         w_vld = ( db_cdpt( CDPT_ROW_F_LAMBDA, : ) ) .* cdpt_vld_idx / fgam; %  - 2 * feps
         
-        [ ~, mdpt_idx ] = max( (1-delta)*w_vld + delta*w_unc.*w_bst.*w_viol.*db_cdpt( end-1, : ) + phi.*db_cdpt( end, : ) );
+        [ ~, mdpt_idx ] = max( (1-delta)*w_vld + delta*w_unc.*w_bst/(2^g_len).*w_viol.*db_cdpt( end-1, : ) + phi.*db_cdpt( end, : ) );
         x_n = db_cdpt( 1:D, mdpt_idx );
         
         % the 'while' snippet below is a last-resort way to avoid multiple samples at the same location
