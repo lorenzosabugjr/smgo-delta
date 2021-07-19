@@ -90,19 +90,19 @@ end
 if isfield( options, 'alpha' )
     alpha = options.alpha;
 else
-    alpha = 0.0025;
+    alpha = 0.005;
 end
 
 if isfield( options, 'beta' )
     beta = options.beta;
 else
-    beta = 0.5;
+    beta = 0.1;
 end
 
 if isfield( options, 'delta' )
     delta = options.delta;
 else
-    delta = 0.1;
+    delta = 0.25;
 end
 
 if isfield( options, 'phi' )
