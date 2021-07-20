@@ -563,7 +563,7 @@ for iter = 1:max_iter
         end
         w_vld = ( db_cdpt( CDPT_ROW_F_LAMBDA, : ) ) .* cdpt_vld_idx / fgam; %  - 2 * feps
         
-        [ ~, mdpt_idx ] = max( (1-delta)*w_vld + delta*w_unc.*w_bst/(2^g_len).*w_viol.*db_cdpt( end-1, : ) + phi.*db_cdpt( end, : ) );
+        [ ~, mdpt_idx ] = max( ((1-delta)*w_vld + delta*w_unc.*w_bst/(2^g_len).*w_viol).*db_cdpt( end-1, : ) + phi.*db_cdpt( end, : ) );
         x_n = db_cdpt( 1:D, mdpt_idx );
         
         % the 'while' snippet below is a last-resort way to avoid multiple samples at the same location
@@ -575,7 +575,7 @@ for iter = 1:max_iter
             w_unc( : , mdpt_idx )   = [];
             w_bst( : , mdpt_idx )   = [];
             w_viol( : , mdpt_idx )  = [];
-            [ ~, mdpt_idx ] = max( (1-delta)*w_vld + delta*w_unc.*w_bst.*w_viol.*db_cdpt( end-1, : ) + phi.*db_cdpt( end, : ) );        
+            [ ~, mdpt_idx ] = max( ((1-delta)*w_vld + delta*w_unc.*w_bst.*w_viol).*db_cdpt( end-1, : ) + phi.*db_cdpt( end, : ) );        
             x_n = db_cdpt( 1:D, mdpt_idx );
         end
         mode_hist(iter) = MODE_EXPLORE;
