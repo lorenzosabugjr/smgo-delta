@@ -137,7 +137,7 @@ MODE_EXPLORE = 2;
 
 X_n = [];
 mode_hist   = NaN( 1, max_iter );
-mode_prev   = MODE_EXPLORE;
+mode_prev   = MODE_EXPLOIT;
 opt_x       = NaN( D, 1 );
 opt_z       = Inf;
 opt_c       = NaN( g_len, 1 );
@@ -364,7 +364,7 @@ for iter = 1:max_iter
 
     % draw candidate points along the directions from x_n to the cdpt_ends
     if iter == 1
-        db_cdpt_iter = [ sbl_seq; zeros( 5 + 6*g_len + 2, sbl_size ) ]; % TODO: use another Sobol sequence for exploration part
+        db_cdpt_iter = [ sbl_seq; zeros( 5 + 6*g_len + 2, sbl_size ) ];
     else
         db_cdpt_iter = [];
     end
@@ -413,30 +413,39 @@ for iter = 1:max_iter
     end
     
     % generate/update trust region hyperbox
-    if ( mode_prev == MODE_EXPLOIT ) && opt_z_new
-        if z_n < mode1_thr
-            % if the actual sample is actually less than expected improvement, 
-            % then enlarge the trust region hyperbox
-            if tr_exp > 0
-                tr_exp = tr_exp - 1;
+    if iter > 1
+        if ( mode_prev == MODE_EXPLOIT ) && opt_z_new
+            if z_n < mode1_thr
+                % if the actual sample is actually less than expected improvement, 
+                % then enlarge the trust region hyperbox
+                if tr_exp > 0
+                    tr_exp = tr_exp - 1;
+                end
             end
-        end
-    else
-        % shrink the trust region hyperbox
-        if tr_exp < 10
-            tr_exp = tr_exp + 1;
         else
-            tr_exp = tr_exp_0;
-        end
-    end    
-    tr_bounds = ones( D, 1 ) * [ 0 1 ] * tr_size * ( tr_coeff ^ tr_exp ) + opt_x * ones( 1, 2 ) * ( 1 - tr_size * tr_coeff ^ tr_exp );
+            % shrink the trust region hyperbox
+            if tr_exp < 10
+                tr_exp = tr_exp + 1;
+            else
+                tr_exp = tr_exp_0;
+            end
+        end    
+    end
+    tr_bounds = ones( D, 1 ) * [ -0.5 0.5 ] * tr_size * ( tr_coeff ^ 1 ) + opt_x * ones( 1, 2 );
     tr_hist( iter ) = tr_exp;
     
     % create candidate points inside tr_bounds, decided by location of sblset points
     % sblset points are D x num matrix
     sbl_cdpt = [ sbl_seq * tr_size * ( tr_coeff ^ tr_exp ) + tr_bounds( : , 1 ) * ones( 1, sbl_size ); 
                  zeros( 2 + 2*g_len, sbl_size ) ];
-    for sbl_i = 1:sbl_size
+    sbl_invd = logical( sum( ( sbl_cdpt(1:D,:) > 1 ) | ( sbl_cdpt(1:D,:) < 0 ) ) );
+    sbl_cdpt( : , sbl_invd ) = [];
+    sbl_size_fltr = size( sbl_cdpt, 2 );
+    if sum( sbl_invd ) > 0
+        iter;
+    end
+%     sbl_cdpt( sbl_cdpt( < 0 , 1 ) = 0;
+    for sbl_i = 1:sbl_size_fltr
         sbl_cdpt( SBL_ROW_FUB, sbl_i ) = min( (X_n(XN_ROW_FVAL,:) + feps) + fgam*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );  
         sbl_cdpt( SBL_ROW_FLB, sbl_i ) = max( (X_n(XN_ROW_FVAL,:) - feps) - fgam*sqrt(sum((sbl_cdpt( 1:D, sbl_i )*ones(1,iter) - X_n(1:D,:)).^2)) );
         for g_i = 1:g_len
@@ -485,7 +494,7 @@ for iter = 1:max_iter
     end
     
     %% Processing and choosing exploitation point from Sobol-generated candidate points
-    sbl_vld_idx   = true( 1, sbl_size );
+    sbl_vld_idx   = true( 1, sbl_size_fltr );
     % filtering due to constraints satisfaction
     for g_i = 1:g_len
         SBL_G_I = SBL_ROW_G_INFO + 2*(g_i-1);
