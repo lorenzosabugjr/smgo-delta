@@ -555,7 +555,8 @@ for iter = 1:max_iter
         w_viol           = ones( 1, cdpt_len );
         for g_i = 1:g_len
             CDPT_G_I     = CDPT_ROW_G_INFO + 6*(g_i-1);
-            g_i_vld      = ( db_cdpt( CDPT_G_I + CDPT_G_EST, : ) >= 0 );
+            g_i_vld      = ( ( db_cdpt( CDPT_G_I + CDPT_G_UB_VTX, : ) + db_cdpt( CDPT_G_I + CDPT_G_UB_HGT, : ) ) ... 
+                           + ( db_cdpt( CDPT_G_I + CDPT_G_LB_VTX, : ) - db_cdpt( CDPT_G_I + CDPT_G_LB_HGT, : ) ) ) / 2 >= 0;
             w_bst        = w_bst .* (g_i_vld+1);
             w_unc        = w_unc + ( db_cdpt( CDPT_G_I + CDPT_G_LAMBDA, : ) )/ggam( g_i ); %  - 2 * geps( g_i )
             cdpt_vld_idx = cdpt_vld_idx & g_i_vld;
@@ -584,7 +585,7 @@ for iter = 1:max_iter
             w_unc( : , mdpt_idx )   = [];
             w_bst( : , mdpt_idx )   = [];
             w_viol( : , mdpt_idx )  = [];
-            [ ~, mdpt_idx ] = max( ((1-delta)*w_vld + delta*w_unc.*w_bst.*w_viol).*db_cdpt( end-1, : ) + phi.*db_cdpt( end, : ) );        
+            [ ~, mdpt_idx ] = max( ((1-delta)*w_vld + delta*w_unc.*w_bst/(2^g_len).*w_viol).*db_cdpt( end-1, : ) + phi.*db_cdpt( end, : ) );        
             x_n = db_cdpt( 1:D, mdpt_idx );
         end
         mode_hist(iter) = MODE_EXPLORE;
