@@ -489,7 +489,7 @@ for iter = 1:max_iter
     end
     
     %% Processing and choosing exploitation point from Sobol-generated candidate points
-    sbl_vld_idx   = true( 1, sbl_size_fltr );
+    sbl_vld_idx   = true( 1, sbl_size );
     % filtering due to constraints satisfaction
     for g_i = 1:g_len
         SBL_G_I = SBL_ROW_G_INFO + 2*(g_i-1);
