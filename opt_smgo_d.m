@@ -431,7 +431,7 @@ for iter = 1:max_iter
             end
         end    
     end
-    tr_bounds = ones( D, 1 ) * [ -0.5 0.5 ] * tr_size * ( tr_coeff ^ 1 ) + opt_x * ones( 1, 2 );
+    tr_bounds = ones( D, 1 ) * [ -0.5 0.5 ] * tr_size * ( tr_coeff ^ tr_exp ) + opt_x * ones( 1, 2 );
     tr_hist( iter ) = tr_exp;
     
     % create candidate points inside tr_bounds, decided by location of sblset points
