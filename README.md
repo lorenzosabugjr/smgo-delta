@@ -1,1 +1,1 @@
-# smgo-delta
+# Constrained Set Membership Global Optimization (SMGO-Δ)
