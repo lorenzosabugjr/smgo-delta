@@ -17,7 +17,7 @@ max_trial = 10;
 % SMGO-D settings
 alpha = 0.005; sobol = 1;
 beta  = 0.1;   trust = 1;
-delta = 0.01; 
+delta = 0.2; 
 options.maxiter     = 500;
 options.alpha       = alpha;
 options.beta        = beta;

@@ -1,13 +1,15 @@
 clear all; close all; clc;
-addpath('test_fns', 'opt_algo', 'util');
+addpath('test_fns', 'util');
 if ~exist('out_dat', 'dir')
     mkdir('out_dat');
 end
 addpath('out_dat');
 
+% Declare definitions, including default settings for SMGO-D
 defines;
 
-test_fn_list  = [ FN_T1 FN_G04 FN_G05 ];
+% Possible options in test problems: FN_T1 FN_STYB_10D G04 G05 G06 G08 G09 G10 G12 G23 G24 
+test_fn_list  = [ FN_T1 ];
 
 %% Automated run for all test functions, opt algos, and exploit weighting
 for test_fn = test_fn_list

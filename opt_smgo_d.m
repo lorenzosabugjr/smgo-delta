@@ -22,19 +22,20 @@ function out = opt_smgo_d(options)
 %   .phi   - age multiplier
 
 % Outputs of this function are contained in the the struct 'out':
-%   .opt_x - 
-%   .opt_z - 
-%   .opt_c - 
-%   .opt_x_hist - 
-%   .opt_z_hist - 
-%   .opt_c_hist - 
-%   .x_hist - 
-%   .z_hist - 
-%   .c_hist - 
-%   .calc_t_hist - 
-%   .mode_hist - 
-%   .gam_hist - 
-%   .tr_hist - 
+%   .opt_x - best (feasible) sampled point
+%   .opt_z - objective value at opt_x
+%   .opt_c - constraint values at opt_x
+%   .opt_x_hist - history of best sampled points throughout the optimization process
+%   .opt_z_hist - history of best objective (corresponding to opt_x_hist)
+%   .opt_c_hist - history of constraints at the best point (corresponding to opt_x_hist)
+%   .x_hist - history of all sampled points
+%   .z_hist - history of all sampled objectives
+%   .c_hist - history of all sampled constraints
+%   .calc_t_hist - history of time elapsed to calculate the next point to sample
+%   .mode_hist - history of SMGO-D mode taken (exploitation or exploration)
+%   .eps_hist - history of calculated noise bounds
+%   .gam_hist - history of calculated Lipschitz constants
+%   .tr_hist - history of trust region exponents (higher exponent means smaller trust region size)
 
 %% Acquiring function arguments/options
 max_iter  = options.maxiter;
